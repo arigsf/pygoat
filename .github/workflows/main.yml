@@ -1,0 +1,37 @@
+name: Coverity
+
+on:
+  workflow_dispatch:
+
+jobs:
+  coverity-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Baixar, Analisar e Enviar para o Coverity Scan
+        env:
+          TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          PROJECT: "arigsf/pygoat" 
+          EMAIL: "arifilhosilva235@gmail.com"
+        run: |
+          echo "1. Baixando o Coverity Build Tool na nuvem..."
+          wget -q https://scan.coverity.com/download/linux64 --post-data "token=$TOKEN&project=$PROJECT" -O coverity_tool.tgz
+          mkdir coverity_tool
+          tar -xf coverity_tool.tgz -C coverity_tool --strip-components=1
+          export PATH=$PWD/coverity_tool/bin:$PATH
+          
+          echo "2. Capturando os arquivos Python do PyGoat..."
+          cov-build --dir cov-int --fs-capture-search . --no-command
+          
+          echo "3. Compactando os resultados..."
+          tar czvf coverity_results.tgz cov-int
+          
+          echo "4. Enviando a build para o painel online do Coverity..."
+          curl --form token=$TOKEN \
+               --form email=$EMAIL \
+               --form file=@coverity_results.tgz \
+               --form version="1.0" \
+               --form description="Analise Automatica via Actions" \
+               "https://scan.coverity.com/builds?project=$PROJECT"
