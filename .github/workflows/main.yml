@@ -10,7 +10,7 @@ jobs:
       - name: Baixar o código do repositório
         uses: actions/checkout@v4
 
-      - name: Baixar, Analisar e Enviar para o Coverity Scan
+      - name: Baixar, Analisar e Enviar para o Coverity
         env:
           TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
           PROJECT: "arigsf/pygoat" 
@@ -22,16 +22,19 @@ jobs:
           tar -xf coverity_tool.tgz -C coverity_tool --strip-components=1
           export PATH=$PWD/coverity_tool/bin:$PATH
           
-          echo "2. Capturando os arquivos Python do PyGoat..."
-          cov-build --dir cov-int --fs-capture-search . --no-command
+          echo "2. Configurando o Coverity para interceptar Python..."
+          cov-configure --python
           
-          echo "3. Compactando os resultados..."
+          echo "3. Simulando a compilação do PyGoat..."
+          cov-build --dir cov-int python3 -m compileall .
+          
+          echo "4. Compactando os resultados..."
           tar czvf coverity_results.tgz cov-int
           
-          echo "4. Enviando a build para o painel online do Coverity..."
+          echo "5. Enviando a build para o painel online do Coverity..."
           curl --form token=$TOKEN \
                --form email=$EMAIL \
                --form file=@coverity_results.tgz \
                --form version="1.0" \
-               --form description="Analise Automatica via Actions" \
+               --form description="Analise Automatica via Actions (Python Compile)" \
                "https://scan.coverity.com/builds?project=$PROJECT"
